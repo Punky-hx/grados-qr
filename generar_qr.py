@@ -26,9 +26,8 @@ try:
         id_estudiante = est["id"]
         nombre_estudiante = est["nombre"]
 
-        # Enlace local que usará el QR (el que abres en tu navegador)
-        # Nota: Cuando subamos la web a internet, cambiaremos esta dirección por el link real
-        url_qr = f"http://localhost:8501/?id={id_estudiante}"
+        # Enlace real de la app desplegada en Streamlit Cloud
+        url_qr = f"https://sacoi-q.streamlit.app/?id={id_estudiante}"
 
         # Configurar el diseño del QR
         qr = qrcode.QRCode(
