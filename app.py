@@ -7,7 +7,8 @@ from helpers import codigo_es_valido, agrupar_por_curso, resumen_curso
 # ⚙️ CONFIGURACIÓN LOGÍSTICA DEL EVENTO
 # ==========================================
 SILLAS_POR_FILA = 2         # Cambia esto según lo que diga el organizador (ej: 15, 20, 25)
-MAX_CUPOS_EXTRAS = 5        # Límite total de cupos adicionales permitidos en el auditorio
+MAX_CUPOS_EXTRAS = 20       # Límite total de cupos adicionales permitidos en el auditorio
+                            # (valor demo: hay 19 extras asignados en BD; ajustar al aforo real)
 # ==========================================
 
 st.set_page_config(page_title="VIP Access - Grados", page_icon="🎓", layout="centered")
