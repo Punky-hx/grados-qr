@@ -33,7 +33,16 @@ st.markdown("""
 
 
 def get_supabase():
+    """Cliente de solo lectura (key pública anon; RLS solo permite SELECT)."""
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
+
+
+def get_supabase_admin():
+    """Cliente para escrituras (key secreta, salta RLS).
+
+    La key vive SOLO en st.secrets (local y Streamlit Cloud), nunca en el repo.
+    """
+    return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_SERVICE_KEY"])
 
 
 def calcular_ubicacion(numero_asiento, sillas_por_fila):
@@ -115,7 +124,7 @@ def render_aprobacion(supabase, token_escaneado):
             if codigo:
                 if codigo_es_valido(codigo, st.secrets["STAFF_CODE"]):
                     if not presente_actual:
-                        supabase.table("estudiantes").update({"presente": True}).eq("id", estudiante_encontrado["id"]).execute()
+                        get_supabase_admin().table("estudiantes").update({"presente": True}).eq("id", estudiante_encontrado["id"]).execute()
                         presente_actual = True
                     st.success("✅ Ingreso registrado — Presente")
                 else:

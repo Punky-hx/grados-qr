@@ -1,4 +1,5 @@
 import os
+import tomllib
 import qrcode
 from PIL import Image
 from supabase import create_client
@@ -7,7 +8,20 @@ from helpers import generar_token
 
 # 1. Credenciales de Supabase
 SUPABASE_URL = "https://ahxfbaceyebvvdoponck.supabase.co/"
-SUPABASE_KEY = "sb_publishable_HMa7MPcg5ORxuCKNk3nN8A_qDmwC6c6"
+SUPABASE_KEY = "sb_publishable_HMa7MPcg5ORxuCKNk3nN8A_qDmwC6c6"  # pública: solo lectura (RLS)
+
+
+def cargar_service_key():
+    """Lee la key secreta desde .streamlit/secrets.toml (gitignored, NUNCA al repo).
+
+    Se necesita para ESCRIBIR tokens (RLS bloquea escrituras con la key pública).
+    Devuelve None si no está configurada.
+    """
+    ruta = os.path.join(".streamlit", "secrets.toml")
+    if not os.path.exists(ruta):
+        return None
+    with open(ruta, "rb") as f:
+        return tomllib.load(f).get("SUPABASE_SERVICE_KEY")
 
 # Logo de la marca (ponlo en assets/logo.png)
 RUTA_LOGO = os.path.join("assets", "logo.png")
@@ -73,7 +87,11 @@ def generar_qr_con_logo(url, ruta_salida, logo=None):
 
 
 def main():
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    service_key = cargar_service_key()
+    supabase = create_client(SUPABASE_URL, service_key or SUPABASE_KEY)
+    if not service_key:
+        print("⚠️  Sin SUPABASE_SERVICE_KEY en .streamlit/secrets.toml — modo solo lectura:")
+        print("    si algún estudiante no tiene token, este script no podrá asignárselo.")
 
     # 2. Crear una carpeta en tu computadora para guardar las imágenes
     if not os.path.exists(carpeta_qrs):
