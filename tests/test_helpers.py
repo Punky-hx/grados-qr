@@ -1,7 +1,7 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from helpers import codigo_es_valido, agrupar_por_curso, resumen_curso, SIN_CURSO
+from helpers import codigo_es_valido, agrupar_por_curso, resumen_curso, generar_token, SIN_CURSO
 
 
 def test_codigo_valido_exacto():
@@ -41,3 +41,19 @@ def test_resumen_curso_cuenta_presentes():
 
 def test_resumen_curso_vacio():
     assert resumen_curso([]) == (0, 0)
+
+
+def test_generar_token_largo_minimo():
+    assert len(generar_token()) >= 10
+
+
+def test_generar_token_solo_caracteres_url_safe():
+    import string
+    permitidos = set(string.ascii_letters + string.digits + "-_")
+    for _ in range(50):
+        assert set(generar_token()) <= permitidos
+
+
+def test_generar_token_no_se_repite():
+    tokens = {generar_token() for _ in range(1000)}
+    assert len(tokens) == 1000

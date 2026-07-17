@@ -48,7 +48,7 @@ def calcular_ubicacion(numero_asiento, sillas_por_fila):
     return fila_letra, silla_num
 
 
-def render_aprobacion(supabase, id_escaneado):
+def render_aprobacion(supabase, token_escaneado):
     try:
         response = supabase.table("estudiantes").select("*").order("curso").order("prioridad_orden").execute()
         estudiantes = response.data
@@ -64,7 +64,7 @@ def render_aprobacion(supabase, id_escaneado):
             total_asientos = 2 + cupos_adicionales  # 2 base + extras
             asiento_final = asiento_actual + total_asientos - 1
 
-            if str(est["id"]) == str(id_escaneado):
+            if token_escaneado and est.get("token") == str(token_escaneado):
                 fila_inicio, silla_inicio = calcular_ubicacion(asiento_actual, SILLAS_POR_FILA)
                 fila_fin, silla_fin = calcular_ubicacion(asiento_final, SILLAS_POR_FILA)
 
@@ -74,6 +74,7 @@ def render_aprobacion(supabase, id_escaneado):
                     ubicacion_final = f"{fila_inicio} Silla {silla_inicio} hasta {fila_fin} Silla {silla_fin}"
 
                 estudiante_encontrado = {
+                    "id": est["id"],
                     "nombre": est["nombre"],
                     "curso": est["curso"],
                     "ubicacion": ubicacion_final,
@@ -114,7 +115,7 @@ def render_aprobacion(supabase, id_escaneado):
             if codigo:
                 if codigo_es_valido(codigo, st.secrets["STAFF_CODE"]):
                     if not presente_actual:
-                        supabase.table("estudiantes").update({"presente": True}).eq("id", id_escaneado).execute()
+                        supabase.table("estudiantes").update({"presente": True}).eq("id", estudiante_encontrado["id"]).execute()
                         presente_actual = True
                     st.success("✅ Ingreso registrado — Presente")
                 else:
@@ -173,7 +174,8 @@ query_params = st.query_params
 if query_params.get("view") == "asistencia":
     render_asistencia(supabase)
 else:
-    id_escaneado = query_params.get("id", "1")
-    render_aprobacion(supabase, id_escaneado)
+    # Solo se acepta el token aleatorio (?t=). El id secuencial ya no sirve.
+    token_escaneado = query_params.get("t")
+    render_aprobacion(supabase, token_escaneado)
 
 st.markdown("<br><p style='text-align: center; color: #4a5568; font-size: 11px;'>Marya Logistics Platform &copy; 2026</p>", unsafe_allow_html=True)

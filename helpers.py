@@ -3,7 +3,18 @@
 Sin dependencias de Streamlit ni Supabase, para poder testearlas aisladas.
 """
 
+import secrets
+
 SIN_CURSO = "Sin curso"
+
+
+def generar_token():
+    """Token aleatorio impredecible para el QR (reemplaza el id secuencial).
+
+    token_urlsafe(8) → ~11 caracteres URL-safe, imposible de adivinar
+    (a diferencia de id=1,2,3...).
+    """
+    return secrets.token_urlsafe(8)
 
 
 def codigo_es_valido(ingresado, esperado):

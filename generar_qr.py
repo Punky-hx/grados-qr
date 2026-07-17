@@ -3,6 +3,8 @@ import qrcode
 from PIL import Image
 from supabase import create_client
 
+from helpers import generar_token
+
 # 1. Credenciales de Supabase
 SUPABASE_URL = "https://ahxfbaceyebvvdoponck.supabase.co/"
 SUPABASE_KEY = "sb_publishable_HMa7MPcg5ORxuCKNk3nN8A_qDmwC6c6"
@@ -83,8 +85,17 @@ def main():
 
     try:
         # 3. Traer los estudiantes de la base de datos
-        response = supabase.table("estudiantes").select("id", "nombre").execute()
+        response = supabase.table("estudiantes").select("id", "nombre", "token").execute()
         estudiantes = response.data
+
+        # 3.5 Asegurar que cada estudiante tenga token aleatorio (idempotente:
+        # si ya tiene, se conserva y su QR impreso sigue siendo válido)
+        for est in estudiantes:
+            if not est.get("token"):
+                nuevo = generar_token()
+                supabase.table("estudiantes").update({"token": nuevo}).eq("id", est["id"]).execute()
+                est["token"] = nuevo
+                print(f"🔑 Token asignado a: {est['nombre']}")
 
         print(f"📊 Se encontraron {len(estudiantes)} estudiantes. Generando códigos...")
 
@@ -93,8 +104,8 @@ def main():
             id_estudiante = est["id"]
             nombre_estudiante = est["nombre"]
 
-            # Enlace real de la app desplegada en Streamlit Cloud
-            url_qr = f"https://sacoi-q.streamlit.app/?id={id_estudiante}"
+            # Enlace con token aleatorio (el id secuencial era adivinable)
+            url_qr = f"https://sacoi-q.streamlit.app/?t={est['token']}"
 
             # Guardar el archivo con el nombre del estudiante (quitando espacios raros)
             nombre_archivo = f"{id_estudiante}_{nombre_estudiante.replace(' ', '_')}.png"
