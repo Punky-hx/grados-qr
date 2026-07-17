@@ -1,7 +1,10 @@
 import streamlit as st
 from supabase import create_client
 
-from helpers import codigo_es_valido, agrupar_por_curso, resumen_curso
+from helpers import (
+    codigo_es_valido, agrupar_por_curso, resumen_curso,
+    calcular_rangos, formatear_ubicacion,
+)
 
 # ==========================================
 # ⚙️ CONFIGURACIÓN LOGÍSTICA DEL EVENTO
@@ -46,52 +49,25 @@ def get_supabase_admin():
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_SERVICE_KEY"])
 
 
-def calcular_ubicacion(numero_asiento, sillas_por_fila):
-    """Convierte un número de asiento en (Fila Letra, Número de silla)."""
-    letras = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O"]
-    indice_fila = (numero_asiento - 1) // sillas_por_fila
-    if indice_fila < len(letras):
-        fila_letra = f"Fila {letras[indice_fila]}"
-    else:
-        fila_letra = f"Fila {indice_fila + 1}"
-    silla_num = ((numero_asiento - 1) % sillas_por_fila) + 1
-    return fila_letra, silla_num
-
-
 def render_aprobacion(supabase, token_escaneado):
     try:
         response = supabase.table("estudiantes").select("*").order("curso").order("prioridad_orden").execute()
         estudiantes = response.data
 
-        asiento_actual = 1
-        total_extras_usados = 0
+        total_extras_usados = sum(est["cupos_adicionales"] for est in estudiantes)
         estudiante_encontrado = None
 
-        for est in estudiantes:
-            cupos_adicionales = est["cupos_adicionales"]
-            total_extras_usados += cupos_adicionales
-
-            total_asientos = 2 + cupos_adicionales  # 2 base + extras
-            asiento_final = asiento_actual + total_asientos - 1
-
+        # Lógica de asientos compartida con asignacion.py (helpers.py)
+        for est, asiento_inicio, asiento_final in calcular_rangos(estudiantes):
             if token_escaneado and est.get("token") == str(token_escaneado):
-                fila_inicio, silla_inicio = calcular_ubicacion(asiento_actual, SILLAS_POR_FILA)
-                fila_fin, silla_fin = calcular_ubicacion(asiento_final, SILLAS_POR_FILA)
-
-                if fila_inicio == fila_fin:
-                    ubicacion_final = f"{fila_inicio} (Sillas {silla_inicio} a {silla_fin})"
-                else:
-                    ubicacion_final = f"{fila_inicio} Silla {silla_inicio} hasta {fila_fin} Silla {silla_fin}"
-
                 estudiante_encontrado = {
                     "id": est["id"],
                     "nombre": est["nombre"],
                     "curso": est["curso"],
-                    "ubicacion": ubicacion_final,
+                    "ubicacion": formatear_ubicacion(asiento_inicio, asiento_final, SILLAS_POR_FILA),
                     "presente": est.get("presente", False),
                 }
-
-            asiento_actual = 1 + asiento_final
+                break
 
         # 📊 PANEL DE ALERTAS PARA DOCENTES / STAFF
         st.markdown("<p style='margin:0; font-size:12px; color:#a0aec0;'>MONITOR DE CAPACIDAD (CUPOS EXTRAS)</p>", unsafe_allow_html=True)

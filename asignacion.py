@@ -1,35 +1,51 @@
-import os
+"""Reporte de consola: asignación de asientos por estudiante.
+
+Usa la MISMA lógica y el MISMO orden que la app (helpers.calcular_rangos,
+orden curso → prioridad_orden), así lo que imprime coincide con lo que
+ve cada familia al escanear su QR.
+"""
+
 from supabase import create_client, Client
 
-# Pegamos las credenciales de su proyecto de Supabase
+from helpers import calcular_rangos, formatear_ubicacion
+
+# Credenciales públicas (RLS: solo lectura)
 SUPABASE_URL = "https://ahxfbaceyebvvdoponck.supabase.co/"
 SUPABASE_KEY = "sb_publishable_HMa7MPcg5ORxuCKNk3nN8A_qDmwC6c6"
 
-# Conectamos Python con la base de datos en la nube
+# Debe coincidir con SILLAS_POR_FILA de app.py
+SILLAS_POR_FILA = 2
+
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-def probar_conexion_y_leer_estudiantes():
+
+def imprimir_asignacion():
     print("🔄 Conectando a Supabase en tiempo real...")
-    
-    # Traemos los estudiantes ordenados por prioridad en la fila
-    response = supabase.table("estudiantes").select("*").order("prioridad_orden").execute()
+
+    # Mismo orden que la app: curso y luego prioridad
+    response = (
+        supabase.table("estudiantes")
+        .select("*")
+        .order("curso")
+        .order("prioridad_orden")
+        .execute()
+    )
     estudiantes = response.data
-    
+
     print(f"✅ ¡Conexión exitosa! Encontré {len(estudiantes)} estudiantes en la nube:\n")
-    
-    asiento_actual = 1
-    
-    for est in estudiantes:
-        # 2 cupos base por estudiante
-        total_asientos = 2 + est["cupos_adicionales"]
-        asiento_final = asiento_actual + total_asientos - 1
-        
-        print(f"🎓 Estudiante: {est['nombre']} | Curso: {est['curso']}")
-        print(f"🪑 Asientos asignados: Fila A (Del Asiento {asiento_actual} al {asiento_final})")
+
+    curso_actual = None
+    for est, asiento_inicio, asiento_final in calcular_rangos(estudiantes):
+        if est["curso"] != curso_actual:
+            curso_actual = est["curso"]
+            print(f"\n════════ CURSO {curso_actual} ════════")
+
+        ubicacion = formatear_ubicacion(asiento_inicio, asiento_final, SILLAS_POR_FILA)
+        total = asiento_final - asiento_inicio + 1
+        print(f"🎓 {est['nombre']} | {total} cupos ({asiento_inicio}-{asiento_final})")
+        print(f"🪑 {ubicacion}")
         print("-" * 45)
-        
-        # El contador se mueve para la siguiente familia
-        asiento_actual = asiento_final + 1
+
 
 if __name__ == "__main__":
-    probar_conexion_y_leer_estudiantes()
+    imprimir_asignacion()
